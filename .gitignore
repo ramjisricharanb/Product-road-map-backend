@@ -1,0 +1,4 @@
+.env
+wallet/*
+!wallet/README.md
+node_modules/
