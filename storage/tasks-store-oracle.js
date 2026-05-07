@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const { config } = require("../config");
 
 let oracledb;
@@ -239,14 +242,58 @@ async function getConnection() {
     oracledb = require("oracledb");
   }
 
+  const resolvedConnectString = resolveConnectString(
+    config.dbConnectionString,
+    config.dbWalletDir
+  );
+
   return oracledb.getConnection({
     user: config.dbUser,
     password: config.dbPassword,
-    connectString: config.dbConnectionString,
-    configDir: config.dbWalletDir,
+    connectString: resolvedConnectString,
     walletLocation: config.dbWalletDir,
     walletPassword: config.dbWalletPassword,
   });
+}
+
+function resolveConnectString(connectString, walletDir) {
+  if (!connectString) {
+    throw new Error("Oracle connect string is missing");
+  }
+
+  const trimmedConnectString = connectString.trim();
+
+  if (
+    trimmedConnectString.startsWith("(") ||
+    trimmedConnectString.includes("://")
+  ) {
+    return trimmedConnectString;
+  }
+
+  const tnsNamesPath = path.join(walletDir, "tnsnames.ora");
+
+  if (!fs.existsSync(tnsNamesPath)) {
+    throw new Error(`Could not find tnsnames.ora in wallet folder: ${walletDir}`);
+  }
+
+  const tnsNamesContent = fs.readFileSync(tnsNamesPath, "utf8");
+  const pattern = new RegExp(
+    `^\\s*${escapeRegExp(trimmedConnectString)}\\s*=\\s*(\\(description=.*\\))\\s*$`,
+    "im"
+  );
+  const match = tnsNamesContent.match(pattern);
+
+  if (!match) {
+    throw new Error(
+      `Could not find connect string alias "${trimmedConnectString}" in tnsnames.ora`
+    );
+  }
+
+  return match[1].trim();
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 module.exports = {

@@ -39,7 +39,7 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === "POST" && pathname === "/api/tasks") {
       const body = await readJsonBody(request);
-      const newTask = createTask(body);
+      const newTask = await createTask(body);
       sendJson(response, 201, newTask);
       return;
     }
@@ -49,7 +49,7 @@ const server = http.createServer(async (request, response) => {
 
       if (request.method === "PUT") {
         const body = await readJsonBody(request);
-        const updatedTask = updateTask(taskId, body);
+        const updatedTask = await updateTask(taskId, body);
 
         if (!updatedTask) {
           sendJson(response, 404, { message: "Task not found" });
@@ -61,7 +61,7 @@ const server = http.createServer(async (request, response) => {
       }
 
       if (request.method === "DELETE") {
-        const deleted = deleteTask(taskId);
+        const deleted = await deleteTask(taskId);
 
         if (!deleted) {
           sendJson(response, 404, { message: "Task not found" });
