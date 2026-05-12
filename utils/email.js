@@ -16,7 +16,7 @@ async function sendPasswordResetEmail(toEmail, resetLink) {
   const transporter = getTransporter();
 
   const mailOptions = {
-    from: `"nConnect Admin" <noreply@nconnect.co.in>`, // Replace with verified sender in Brevo
+    from: process.env.SMTP_FROM_EMAIL || '"nConnect Admin" <noreply@nconnect.co.in>',
     to: toEmail,
     subject: "Password Reset Request - nConnect",
     text: `You requested a password reset. Please click the link below to reset your password. This link will expire in 15 minutes.\n\n${resetLink}\n\nIf you did not request this, please ignore this email.`,

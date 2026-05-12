@@ -127,7 +127,7 @@ const server = http.createServer(async (request, response) => {
 
         await createPasswordResetToken(user.id, tokenHash, expiresAt);
 
-        const resetLink = \`\${process.env.FRONTEND_URL || "https://nconnect.co.in"}/reset-password.html?token=\${rawToken}\`;
+        const resetLink = `${process.env.FRONTEND_URL || "https://nconnect.co.in"}/reset-password.html?token=${rawToken}`;
         await sendPasswordResetEmail(user.email, resetLink);
       }
       
