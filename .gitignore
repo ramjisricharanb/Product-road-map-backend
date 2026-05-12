@@ -1,4 +1,5 @@
 .env
+.env.production
 wallet/*
 !wallet/README.md
 node_modules/
