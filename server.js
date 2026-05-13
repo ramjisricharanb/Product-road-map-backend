@@ -230,10 +230,16 @@ const server = http.createServer(async (request, response) => {
 
     sendJson(response, 404, { message: "Route not found" });
   } catch (error) {
-    sendJson(response, 500, {
-      message: "Something went wrong in the backend",
-      error: error.message,
-    });
+    console.error("Caught error in request handler:", error);
+    if (!response.headersSent) {
+      sendJson(response, 500, {
+        message: "Something went wrong in the backend",
+        error: error.message,
+      });
+    } else {
+      console.error("Headers already sent, unable to send 500 error response.");
+      response.end();
+    }
   }
 });
 

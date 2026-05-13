@@ -45,6 +45,8 @@ function resolveConnectString(connectString, walletDir) {
 
 async function initOraclePool() {
   try {
+    oracledb.fetchAsString = [oracledb.CLOB];
+    
     const resolvedConnectString = resolveConnectString(
       config.dbConnectionString,
       config.dbWalletDir
