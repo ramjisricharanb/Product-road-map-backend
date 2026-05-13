@@ -1,9 +1,4 @@
-const fs = require("fs");
-const path = require("path");
-
-const { config } = require("../config");
-
-let oracledb;
+const { getConnection } = require("./oracle-db");
 
 async function getTasks() {
   const connection = await getConnection();
@@ -235,65 +230,6 @@ function fromOracleDate(value) {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-async function getConnection() {
-  if (!oracledb) {
-    oracledb = require("oracledb");
-  }
-
-  const resolvedConnectString = resolveConnectString(
-    config.dbConnectionString,
-    config.dbWalletDir
-  );
-
-  return oracledb.getConnection({
-    user: config.dbUser,
-    password: config.dbPassword,
-    connectString: resolvedConnectString,
-    walletLocation: config.dbWalletDir,
-    walletPassword: config.dbWalletPassword,
-  });
-}
-
-function resolveConnectString(connectString, walletDir) {
-  if (!connectString) {
-    throw new Error("Oracle connect string is missing");
-  }
-
-  const trimmedConnectString = connectString.trim();
-
-  if (
-    trimmedConnectString.startsWith("(") ||
-    trimmedConnectString.includes("://")
-  ) {
-    return trimmedConnectString;
-  }
-
-  const tnsNamesPath = path.join(walletDir, "tnsnames.ora");
-
-  if (!fs.existsSync(tnsNamesPath)) {
-    throw new Error(`Could not find tnsnames.ora in wallet folder: ${walletDir}`);
-  }
-
-  const tnsNamesContent = fs.readFileSync(tnsNamesPath, "utf8");
-  const pattern = new RegExp(
-    `^\\s*${escapeRegExp(trimmedConnectString)}\\s*=\\s*(\\(description=.*\\))\\s*$`,
-    "im"
-  );
-  const match = tnsNamesContent.match(pattern);
-
-  if (!match) {
-    throw new Error(
-      `Could not find connect string alias "${trimmedConnectString}" in tnsnames.ora`
-    );
-  }
-
-  return match[1].trim();
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 module.exports = {

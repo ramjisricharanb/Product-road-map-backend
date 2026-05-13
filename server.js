@@ -13,6 +13,8 @@ const {
   generateToken,
   authenticateRequest,
 } = require("./utils/auth-helpers");
+
+const { initOraclePool } = require("./storage/oracle-db");
 const { sendPasswordResetEmail } = require("./utils/email");
 const {
   createUser,
@@ -235,9 +237,15 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend server running on port ${PORT}`);
-});
+(async () => {
+  if (config.dbMode === "oracle") {
+    await initOraclePool();
+  }
+  
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend server running on port ${PORT}`);
+  });
+})();
 
 function setCorsHeaders(response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
