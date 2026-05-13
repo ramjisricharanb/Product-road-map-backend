@@ -3,6 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const { config } = require("../config");
 
+// Single persistent connection - absolute minimum memory footprint
+let _connection = null;
+let _connectionPromise = null;
+let _connectConfig = null;
+
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -44,34 +49,70 @@ function resolveConnectString(connectString, walletDir) {
 }
 
 async function initOraclePool() {
-  try {
-    oracledb.fetchAsString = [oracledb.CLOB];
-    
-    const resolvedConnectString = resolveConnectString(
-      config.dbConnectionString,
-      config.dbWalletDir
-    );
+  oracledb.fetchAsString = [oracledb.CLOB];
 
-    await oracledb.createPool({
-      user: config.dbUser,
-      password: config.dbPassword,
-      connectString: resolvedConnectString,
-      walletLocation: config.dbWalletDir,
-      walletPassword: config.dbWalletPassword,
-      poolMin: 0,
-      poolMax: 2,
-      poolIncrement: 1,
-      poolTimeout: 60
-    });
-    console.log("OracleDB Connection Pool initialized successfully.");
-  } catch (err) {
-    console.error("Failed to initialize OracleDB Connection Pool:", err);
-    process.exit(1);
+  const resolvedConnectString = resolveConnectString(
+    config.dbConnectionString,
+    config.dbWalletDir
+  );
+
+  _connectConfig = {
+    user: config.dbUser,
+    password: config.dbPassword,
+    connectString: resolvedConnectString,
+    walletLocation: config.dbWalletDir,
+    walletPassword: config.dbWalletPassword,
+  };
+
+  // Open the first connection eagerly so startup failures are caught
+  await _getOrCreateConnection();
+  console.log("OracleDB single persistent connection established.");
+}
+
+async function _getOrCreateConnection() {
+  // If we already have a healthy connection, return it
+  if (_connection) {
+    try {
+      // Ping to verify the connection is still alive
+      await _connection.ping();
+      return _connection;
+    } catch (err) {
+      // Connection is dead, clear it and create a new one
+      console.warn("Oracle connection lost, reconnecting...", err.message);
+      _connection = null;
+    }
   }
+
+  // Prevent multiple concurrent reconnections
+  if (_connectionPromise) {
+    return _connectionPromise;
+  }
+
+  _connectionPromise = oracledb.getConnection(_connectConfig)
+    .then(conn => {
+      _connection = conn;
+      _connectionPromise = null;
+      return conn;
+    })
+    .catch(err => {
+      _connectionPromise = null;
+      throw err;
+    });
+
+  return _connectionPromise;
 }
 
 async function getConnection() {
-  return oracledb.getConnection();
+  // Return a wrapper that has the same interface as a pooled connection
+  // but does NOT close the underlying connection when .close() is called
+  const realConn = await _getOrCreateConnection();
+  
+  return {
+    execute: (...args) => realConn.execute(...args),
+    ping: () => realConn.ping(),
+    // close() is a no-op - we keep the connection alive
+    close: async () => { /* no-op: single persistent connection */ },
+  };
 }
 
 module.exports = {
