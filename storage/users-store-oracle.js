@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const oracledb = require("oracledb");
 const { getConnection } = require("./oracle-db");
 
 // User Functions

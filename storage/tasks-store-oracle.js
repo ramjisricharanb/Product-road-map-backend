@@ -1,3 +1,4 @@
+const oracledb = require("oracledb");
 const { getConnection } = require("./oracle-db");
 
 async function getTasks() {
