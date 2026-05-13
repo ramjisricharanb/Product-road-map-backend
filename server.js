@@ -41,7 +41,8 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+  const host = request.headers.host || 'localhost';
+  const requestUrl = new URL(request.url, `http://${host}`);
   const { pathname } = requestUrl;
 
   try {
