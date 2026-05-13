@@ -58,9 +58,10 @@ async function initOraclePool() {
       connectString: resolvedConnectString,
       walletLocation: config.dbWalletDir,
       walletPassword: config.dbWalletPassword,
-      poolMin: 2,
-      poolMax: 4,
-      poolIncrement: 1
+      poolMin: 0,
+      poolMax: 2,
+      poolIncrement: 1,
+      poolTimeout: 60
     });
     console.log("OracleDB Connection Pool initialized successfully.");
   } catch (err) {
