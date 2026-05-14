@@ -2,9 +2,12 @@ const { config } = require("../config");
 
 const jsonStore = require("./tasks-store-json");
 const oracleStore = require("./tasks-store-oracle");
+const sqliteStore = require("./tasks-store-sqlite");
 
 function getStore() {
-  return config.dbMode === "oracle" ? oracleStore : jsonStore;
+  if (config.dbMode === "oracle") return oracleStore;
+  if (config.dbMode === "sqlite") return sqliteStore;
+  return jsonStore;
 }
 
 async function getTasks() {

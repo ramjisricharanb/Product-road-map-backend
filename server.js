@@ -14,8 +14,28 @@ const {
   authenticateRequest,
 } = require("./utils/auth-helpers");
 
-const { initOraclePool } = require("./storage/oracle-db");
 const { sendPasswordResetEmail } = require("./utils/email");
+const crypto = require("crypto");
+
+const { config } = require("./config");
+const PORT = config.port;
+
+// Dynamically load the correct user store and DB initializer based on dbMode
+let userStore;
+let initDb;
+
+if (config.dbMode === "sqlite") {
+  userStore = require("./storage/users-store-sqlite");
+  initDb = require("./storage/sqlite-db").initSqlite;
+} else if (config.dbMode === "oracle") {
+  userStore = require("./storage/users-store-oracle");
+  initDb = require("./storage/oracle-db").initOraclePool;
+} else {
+  // JSON mode - no user store or DB init needed for now
+  userStore = require("./storage/users-store-oracle");
+  initDb = () => {};
+}
+
 const {
   createUser,
   getUserByEmail,
@@ -26,11 +46,7 @@ const {
   createPasswordResetToken,
   getValidResetToken,
   deleteResetTokensForUser,
-} = require("./storage/users-store-oracle");
-const crypto = require("crypto");
-
-const { config } = require("./config");
-const PORT = config.port;
+} = userStore;
 
 const server = http.createServer(async (request, response) => {
   setCorsHeaders(response);
@@ -245,12 +261,10 @@ const server = http.createServer(async (request, response) => {
 });
 
 (async () => {
-  if (config.dbMode === "oracle") {
-    await initOraclePool();
-  }
+  await initDb();
   
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Backend server running on port ${PORT}`);
+    console.log(`Backend server running on port ${PORT} (db: ${config.dbMode})`);
   });
 })();
 
